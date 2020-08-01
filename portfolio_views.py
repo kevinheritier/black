@@ -181,18 +181,18 @@ class Views:
         the name of the assets as columns as well as an 'r' column for the expected returns.
 
         Args:
-            df (pandas dataframe): Contain asset names as columns for coefficients, 
-                                   r column for expected return 
+            df (pandas dataframe): Contain asset names as columns for coefficients,
+                                   r column for expected return
                                    and c column for confidence (default 100% confidence)
 
         Raises:
             IndexError: if 'r' not in column
-            ValueError: For empty dataframe 
+            ValueError: For empty dataframe
         """
         if df.shape[1] < 2:
-            raise ValueError(""" Please provide valid view dataframe. 
-                                 The dataframe must contain the name of the assets as columns, 
-                                 an 'r' column for the expected returns, 
+            raise ValueError(""" Please provide valid view dataframe.
+                                 The dataframe must contain the name of the assets as columns,
+                                 an 'r' column for the expected returns,
                                  an optional 'c' column for confidence coefficients""")
 
         if 'r' not in df.columns:
@@ -291,7 +291,7 @@ class PortfolioProblem:
     def __init__(self, portfolio, views):
         """
         param Portfolio portfolio: portfolio containing names, returns, covariance and kappa
-        param Views views: View object with P, Q matrices and confidence 
+        param Views views: View object with P, Q matrices and confidence
 
         """
         self.portfolio = portfolio
@@ -341,13 +341,13 @@ class PortfolioProblem:
     @staticmethod
     def f_k(omega, P, V, k, tau=1):
         """
-        param float omega: diagonal element of covariance matrix of error term 
-        param Portfolio P:   
+        param float omega: diagonal element of covariance matrix of error term
+        param Portfolio P:
         param Views V:
-        param int k: 
+        param int k:
 
 
-        return square difference of new weights vs target weights 
+        return square difference of new weights vs target weights
         """
         InvSig = np.linalg.inv(tau * P.cov)
         first_term = np.linalg.inv(InvSig + np.outer(V.P[k], V.P[k]) / omega)
@@ -394,15 +394,22 @@ class ViewsA:
 
 if __name__ == "__main__":
 
-    port2 = Portfolio(['equities', 'fixed_income'],
-                      r=np.array([0.07, 0.03]),
-                      cov=np.array([[1.2, -0.1], [-0.1, 0.3]]),
+    d = {
+        'equities': dict(r=0.07),
+        'fixed_income': dict(r=0.03),
+    }
+
+    port2 = Portfolio(d,
+                      cov=pd.DataFrame(
+                          np.array([[1.2, -0.1], [-0.1, 0.3]]), columns=d.keys(), index=d.keys()),
                       kappa=0.1)
+    v = Views()
+    df = pd.DataFrame(
+        {
+            'fixed_income': [0, 1, 1],
+            'equities': [1, 0, 0],
+            'r': [0.05, 0.01, 0.01],
+            'c': [0.5, 0.5, 0.5]
+        })
 
-    v = Views(port2)
-
-    v.add(['equities'], [1], 0.1, 1)
-    v.add(['fixed_income'], [1], -0.3, 1)
-
-    res = minimize(Portfolio.f_k, 0.1, args=(port2, v, 0))
-    print(res)
+    v.add_views(df)
