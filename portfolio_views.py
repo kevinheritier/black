@@ -21,7 +21,7 @@ class Portfolio():
 
         self.df = data
         self.cov = cov
-        self.kappa = 0.1
+        self.kappa = 1
 
     @property
     def df(self):
@@ -117,6 +117,15 @@ class Portfolio():
         else:
             return self.kappa * np.dot(self._cov.values, self.w.values)
 
+     def imp_kap(self,inplace=True):
+        """"
+        Calcule l'aversion au risque explicite
+        """
+        if inplace:
+            self.kappa=self.r.iloc[0]/self._cov.iloc[0, :].dot(self.w)
+        else:
+            return self.r.iloc[0]/self._cov.iloc[0, :].dot(self.w)
+               
     # Calcule le rendement attendu de Black-litterman
     # tau est le scalaire à calibrer
     # P la matrice K*N qui associe les K views aux N acfifs
