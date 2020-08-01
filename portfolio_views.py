@@ -66,7 +66,7 @@ class Portfolio():
                     "Covariance dataframe {} must be symmetric with same index and columns names".format(cov))
             if (cov.index != cov.columns).all():
                 raise ValueError(
-                    "Covariance indices: {} must be equal to covariance columns: {}")
+                    "Covariance indices: {} must be equal to covariance columns: {}").format(cov.index, cov.columns)
             if not cov.equals(cov.transpose()):
                 raise ValueError(
                     "Covariance dataframe {} must be symmetric".format(cov))
@@ -101,7 +101,7 @@ class Portfolio():
         if inplace:
             self._df.loc['w', :] = w
         else:
-            return w / self.kappa
+            return w
 
     # Calcule les sur-rendements implicites pour une matrice de covariance et des poids normalisés
     def imp_ret(self, inplace=True):
@@ -310,7 +310,7 @@ class PortfolioProblem:
         """
 
         # Qk - pk Pi
-        X = view[k] - views[k]['P'].dot(portfolio.r)
+        X = view[k]['r'] - views[k]['P'].dot(portfolio.r)
         # inv(pk tau Sigma pk')
         PkPiPk_1 = 1. / v[k]['P'].dot(tau * port2.cov.dot(v[k]['P']))
         r_100 = portfolio.r - tau * portfolio.cov.dot(v[k]['P']) * PkPiPk_1 * X
