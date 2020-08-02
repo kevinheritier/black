@@ -89,6 +89,10 @@ class Portfolio():
     def r(self):
         return self._df.loc['r', :]
 
+    @r.setter
+    def r(self, r):
+        self._df.loc['r', :] = r
+
     def optim_w(self, inplace=True):
         """
         Calcule les poids optimaux avec une matrice de covariance et des sur-rendements
@@ -155,18 +159,16 @@ class Portfolio():
         copy.optim_w()
         return copy.r
 
-    # Calcule le rendement pour la k-ème vue avec une certitude de 100%
-    def post_ret100_k(self, V, k, tau=1):
-        cop = self.copy()
-        V_k = Views(cop)
-        V_k.P = V.P[k].reshape(1, v.P.shape[1])
-        V_k.Q = V.Q[k].reshape(1, 1)
-        V_k.conf = V.conf[k]
-        return cop.post_ret100(V_k, tau)
 
     def w_pk(self, V, k):
         w = self.post_ret100_k(V, k)
         return w + (w - self.w) * V.conf
+
+    def copy(self):
+        return copy.copy(self)
+
+    def deepcopy(self):
+        return copy.deepcopy(self)
 
     @staticmethod
     def f_k(omega, P, V, k, tau=1):
@@ -294,6 +296,9 @@ class Views:
                              ])
         return phrase
 
+    def __len__(self):
+        return self._df.shape[0]+1
+
 
 class PortfolioProblem:
 
@@ -306,7 +311,7 @@ class PortfolioProblem:
         self.portfolio = portfolio
         self.views = views
 
-    def post_ret100_k(self, k, tau=1.0):
+    def post_ret100_k(self, k, inplace=True, tau=1.0):
         """
         Calcule le rendement attendu de Black-litterman avec des vues ayant 100% de certitude
 
@@ -321,15 +326,19 @@ class PortfolioProblem:
         # Qk - pk Pi
         X = self.views[k]['r'] - self.views[k]['P'].dot(self.portfolio.r)
         # inv(pk tau Sigma pk')
-        PkPiPk_1 = 1. / \
-            self.views[k]['P'].dot(
+        PkPiPk_1 = 1. /  self.views[k]['P'].dot(
                 tau * self.portfolio.cov.dot(self.views[k]['P']))
-        r_100 = self.portfolio.r + tau * \
-            self.portfolio.cov.dot(self.views[k]['P']) * PkPiPk_1 * X
-        new_portfolio = self.copy()
-        copy.r = Z
-        copy.optim_w()
-        return copy.r
+        r_100 = self.portfolio.r + tau * self.portfolio.cov.dot(self.views[k]['P']) * PkPiPk_1 * X
+        if inplace:
+            # new_portfolio is not a copy here but is just another name for self.portfolio
+            new_portfolio = self.portfolio
+        else:
+            new_portfolio = self.portfolio.deepcopy()
+        new_portfolio.r = r_100
+        # optimize weights wrt new expected returns, covariance not changed for r distribution
+        new_portfolio.optim_w()
+        if not inplace:
+            return new_portfolio
 
     def post_ret100(self, tau=1.0):
         """
