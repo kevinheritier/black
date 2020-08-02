@@ -320,7 +320,7 @@ class PortfolioProblem:
             tau (float, optional): tau est le scalaire à calibrer
 
         Returns:
-            TYPE: Description
+            TYPE: Portfolio if inplace=False
         """
 
         # Qk - pk Pi
@@ -340,7 +340,23 @@ class PortfolioProblem:
         if not inplace:
             return new_portfolio
 
-    def post_ret100(self, tau=1.0):
+    def w_pk(self, k):
+        """
+        Calculate the w_%k, linear average between current weight in self.portfolio and weight
+        using view k with 100% confidence
+
+        Args:
+            k (int): view index
+
+        Deleted Parameters:
+            inplace (bool, optional): Not sure if we need that
+        """
+        dummy_portfolio = self.post_ret100_k(k, inplace=False)
+        confidence_k = self.views[k]['c']
+        w_pk = self.portfolio.w + (dummy_portfolio.w - self.portfolio.w) * confidence_k
+        return w_pk
+
+    def post_ret100(self, inplace=True, tau=1.0):
         """
         Calcule le rendement attendu de Black-litterman avec des vues ayant 100% de certitude
 
@@ -350,14 +366,7 @@ class PortfolioProblem:
         Returns:
             TYPE: Description
         """
-        X = self.views.df['r'] - np.dot(V.P, self.r).reshape(len(V.Q), 1)
-        PSPt = np.linalg.inv(np.dot(np.dot(V.P, 1 * self.cov), V.P.T))
-        Z = self.r + np.dot(tau * np.dot(self.cov, V.P.T),
-                            np.dot(PSPt, X)).reshape(V.P.shape[1])
-        copy = self.copy()
-        copy.r = Z
-        copy.optim_w()
-        return copy.r
+        print("NOT IMPLEMENTED")
 
     @staticmethod
     def f_k(omega, P, V, k, tau=1):
