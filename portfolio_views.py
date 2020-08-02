@@ -319,14 +319,11 @@ class PortfolioProblem:
         """
 
         # Qk - pk Pi
-        X = view[k]['r'] - views[k]['P'].dot(portfolio.r)
+        X = self.views[k]['r'] - self.views[k]['P'].dot(self.portfolio.r)
         # inv(pk tau Sigma pk')
-        PkPiPk_1 = 1. / v[k]['P'].dot(tau * port2.cov.dot(v[k]['P']))
-        r_100 = portfolio.r - tau * portfolio.cov.dot(v[k]['P']) * PkPiPk_1 * X
-        new_portfolio = self.copy()
-        copy.r = Z
-        copy.optim_w()
-        return copy.r
+        PkPiPk_1 = 1. / self.views[k]['P'].dot(tau * self.portfolio.cov.dot(self.views[k]['P']))
+        r_100 = self.portfolio.r + tau *  PkPiPk_1 * X*self.portfolio.cov.dot(self.views[k]['P']) 
+        return r_100
 
     def post_ret100(self, tau=1.0):
         """
