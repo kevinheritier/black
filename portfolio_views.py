@@ -97,7 +97,7 @@ class Portfolio():
             inplace (bool, optional): override les poids dans l'instance si Vrai (default), output poids (np.array) sinon
         """
         w = np.linalg.inv(self._cov.values) @ self.r.values
-     #  self.kappa = w.sum()
+     # self.kappa = w.sum()
         if inplace:
             self._df.loc['w', :] = w
         else:
@@ -117,15 +117,15 @@ class Portfolio():
         else:
             return self.kappa * np.dot(self._cov.values, self.w.values)
 
-     def imp_kap(self,inplace=True):
+    def imp_kap(self, inplace=True):
         """"
         Calcule l'aversion au risque explicite
         """
         if inplace:
-            self.kappa=self.r.iloc[0]/self._cov.iloc[0, :].dot(self.w)
+            self.kappa = self.r.iloc[0] / self._cov.iloc[0, :].dot(self.w)
         else:
-            return self.r.iloc[0]/self._cov.iloc[0, :].dot(self.w)
-               
+            return self.r.iloc[0] / self._cov.iloc[0, :].dot(self.w)
+
     # Calcule le rendement attendu de Black-litterman
     # tau est le scalaire à calibrer
     # P la matrice K*N qui associe les K views aux N acfifs
@@ -319,10 +319,13 @@ class PortfolioProblem:
         """
 
         # Qk - pk Pi
-        X = view[k]['r'] - views[k]['P'].dot(portfolio.r)
+        X = self.views[k]['r'] - self.views[k]['P'].dot(self.portfolio.r)
         # inv(pk tau Sigma pk')
-        PkPiPk_1 = 1. / v[k]['P'].dot(tau * port2.cov.dot(v[k]['P']))
-        r_100 = portfolio.r - tau * portfolio.cov.dot(v[k]['P']) * PkPiPk_1 * X
+        PkPiPk_1 = 1. / \
+            self.views[k]['P'].dot(
+                tau * self.portfolio.cov.dot(self.views[k]['P']))
+        r_100 = self.portfolio.r + tau * \
+            self.portfolio.cov.dot(self.views[k]['P']) * PkPiPk_1 * X
         new_portfolio = self.copy()
         copy.r = Z
         copy.optim_w()
