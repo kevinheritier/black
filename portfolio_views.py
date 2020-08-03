@@ -5,7 +5,9 @@ import openpyxl as ox
 from scipy.optimize import minimize
 import enum
 from collections.abc import Iterable
+from collections import namedtuple
 import copy
+
 
 class Portfolio():
 
@@ -159,7 +161,6 @@ class Portfolio():
         copy.optim_w()
         return copy.r
 
-
     def w_pk(self, V, k):
         w = self.post_ret100_k(V, k)
         return w + (w - self.w) * V.conf
@@ -179,13 +180,17 @@ class Portfolio():
         return np.linalg.norm(P.w_pk(V, k) - w_k)
 
 
-# Vue avec prise en compte de la confiance
+# single view representation
+class View(namedtuple('View', 'P r c')):
+    def __repr__(self):
+        return Views.view_to_str(self.P.to_dict(), self.r, self.c)
 
+# Multiple views class
 class Views:
 
     def __init__(self, views={}):
+        # default views in dataframe form
         self._df = pd.DataFrame()
-        self.view_list = self._df.to_dict("records")
 
     def add_views(self, df):
         """Given a dataframe of view(s), add these views to the Views object. The dataframe must contain
@@ -226,7 +231,7 @@ class Views:
             print("Dropping duplicates")
             self._df = self._df.drop_duplicates()
 
-        self._df.sort_index(axis=0, inplace=True)
+        self._df.reset_index(drop=True, inplace=True)
         self._df.sort_index(axis=1, inplace=True)
         self._df = self._df.fillna(0.)
 
@@ -243,9 +248,9 @@ class Views:
         return df_coefficients
 
     def __getitem__(self, i):
-        return {'P': self._df.drop(['r', 'c'], axis=1).loc[i, :],
-                'r': self._df.loc[i, 'r'],
-                'c': self._df.loc[i, 'c']}
+        return View(P=self._df.drop(['r', 'c'], axis=1).loc[i, :],
+                    r=self._df.loc[i, 'r'],
+                    c=self._df.loc[i, 'c'])
 
     def check_if_view_already_exist(self, view):
         """
@@ -296,8 +301,14 @@ class Views:
                              ])
         return phrase
 
+    def to_list(self):
+        return [self[k] for k in range(self._df.shape[0])]
+
     def __len__(self):
-        return self._df.shape[0]+1
+        return self._df.shape[0]
+
+    def __iter__(self):
+        return (self[k] for k in range(self._df.shape[0]))
 
 
 class PortfolioProblem:
@@ -311,12 +322,12 @@ class PortfolioProblem:
         self.portfolio = portfolio
         self.views = views
 
-    def post_ret100_k(self, k, inplace=True, tau=1.0):
+    def post_ret100_k(self, view_k, inplace=True, tau=1.0):
         """
         Calcule le rendement attendu de Black-litterman avec des vues ayant 100% de certitude
 
         Args:
-            k (int): view index
+            view_k (View object): single view to take in consideration
             tau (float, optional): tau est le scalaire à calibrer
 
         Returns:
@@ -324,11 +335,12 @@ class PortfolioProblem:
         """
 
         # Qk - pk Pi
-        X = self.views[k]['r'] - self.views[k]['P'].dot(self.portfolio.r)
+        X = self.view_k.r - self.view_k.P.dot(self.portfolio.r)
         # inv(pk tau Sigma pk')
-        PkPiPk_1 = 1. /  self.views[k]['P'].dot(
-                tau * self.portfolio.cov.dot(self.views[k]['P']))
-        r_100 = self.portfolio.r + tau * self.portfolio.cov.dot(self.views[k]['P']) * PkPiPk_1 * X
+        PkPiPk_1 = 1. / self.view_k.P.dot(
+            tau * self.portfolio.cov.dot(self.view_k.P))
+        r_100 = self.portfolio.r + tau * \
+            self.portfolio.cov.dot(self.view_k.P) * PkPiPk_1 * X
         if inplace:
             # new_portfolio is not a copy here but is just another name for self.portfolio
             new_portfolio = self.portfolio
@@ -340,20 +352,21 @@ class PortfolioProblem:
         if not inplace:
             return new_portfolio
 
-    def w_pk(self, k):
+    def w_pk(self, view_k):
         """
         Calculate the w_%k, linear average between current weight in self.portfolio and weight
         using view k with 100% confidence
 
         Args:
-            k (int): view index
+            view_k (View object): single view to take in consideration
 
         Deleted Parameters:
             inplace (bool, optional): Not sure if we need that
         """
-        dummy_portfolio = self.post_ret100_k(k, inplace=False)
-        confidence_k = self.views[k]['c']
-        w_pk = self.portfolio.w + (dummy_portfolio.w - self.portfolio.w) * confidence_k
+        dummy_portfolio = self.post_ret100_k(view_k, inplace=False)
+        confidence_k = self.view_k.c
+        w_pk = self.portfolio.w + \
+            (dummy_portfolio.w - self.portfolio.w) * confidence_k
         return w_pk
 
     def post_ret100(self, inplace=True, tau=1.0):
