@@ -5,7 +5,9 @@ import openpyxl as ox
 from scipy.optimize import minimize
 import enum
 from collections.abc import Iterable
+from collections import namedtuple
 import copy
+
 
 class Portfolio():
 
@@ -89,6 +91,10 @@ class Portfolio():
     def r(self):
         return self._df.loc['r', :]
 
+    @r.setter
+    def r(self, r):
+        self._df.loc['r', :] = r
+
     def optim_w(self, inplace=True):
         """
         Calcule les poids optimaux avec une matrice de covariance et des sur-rendements
@@ -97,7 +103,7 @@ class Portfolio():
             inplace (bool, optional): override les poids dans l'instance si Vrai (default), output poids (np.array) sinon
         """
         w = np.linalg.inv(self._cov.values) @ self.r.values
-     #  self.kappa = w.sum()
+     # self.kappa = w.sum()
         if inplace:
             self._df.loc['w', :] = w
         else:
@@ -117,15 +123,15 @@ class Portfolio():
         else:
             return self.kappa * np.dot(self._cov.values, self.w.values)
 
-     def imp_kap(self,inplace=True):
+    def imp_kap(self, inplace=True):
         """"
         Calcule l'aversion au risque explicite
         """
         if inplace:
-            self.kappa=self.r.iloc[0]/self._cov.iloc[0, :].dot(self.w)
+            self.kappa = self.r.iloc[0] / self._cov.iloc[0, :].dot(self.w)
         else:
-            return self.r.iloc[0]/self._cov.iloc[0, :].dot(self.w)
-               
+            return self.r.iloc[0] / self._cov.iloc[0, :].dot(self.w)
+
     # Calcule le rendement attendu de Black-litterman
     # tau est le scalaire à calibrer
     # P la matrice K*N qui associe les K views aux N acfifs
@@ -155,18 +161,15 @@ class Portfolio():
         copy.optim_w()
         return copy.r
 
-    # Calcule le rendement pour la k-ème vue avec une certitude de 100%
-    def post_ret100_k(self, V, k, tau=1):
-        cop = self.copy()
-        V_k = Views(cop)
-        V_k.P = V.P[k].reshape(1, v.P.shape[1])
-        V_k.Q = V.Q[k].reshape(1, 1)
-        V_k.conf = V.conf[k]
-        return cop.post_ret100(V_k, tau)
-
     def w_pk(self, V, k):
         w = self.post_ret100_k(V, k)
         return w + (w - self.w) * V.conf
+
+    def copy(self):
+        return copy.copy(self)
+
+    def deepcopy(self):
+        return copy.deepcopy(self)
 
     @staticmethod
     def f_k(omega, P, V, k, tau=1):
@@ -177,13 +180,17 @@ class Portfolio():
         return np.linalg.norm(P.w_pk(V, k) - w_k)
 
 
-# Vue avec prise en compte de la confiance
+# single view representation
+class View(namedtuple('View', 'P r c')):
+    def __repr__(self):
+        return Views.view_to_str(self.P.to_dict(), self.r, self.c)
 
+# Multiple views class
 class Views:
 
     def __init__(self, views={}):
+        # default views in dataframe form
         self._df = pd.DataFrame()
-        self.view_list = self._df.to_dict("records")
 
     def add_views(self, df):
         """Given a dataframe of view(s), add these views to the Views object. The dataframe must contain
@@ -224,7 +231,7 @@ class Views:
             print("Dropping duplicates")
             self._df = self._df.drop_duplicates()
 
-        self._df.sort_index(axis=0, inplace=True)
+        self._df.reset_index(drop=True, inplace=True)
         self._df.sort_index(axis=1, inplace=True)
         self._df = self._df.fillna(0.)
 
@@ -241,9 +248,9 @@ class Views:
         return df_coefficients
 
     def __getitem__(self, i):
-        return {'P': self._df.drop(['r', 'c'], axis=1).loc[i, :],
-                'r': self._df.loc[i, 'r'],
-                'c': self._df.loc[i, 'c']}
+        return View(P=self._df.drop(['r', 'c'], axis=1).loc[i, :],
+                    r=self._df.loc[i, 'r'],
+                    c=self._df.loc[i, 'c'])
 
     def check_if_view_already_exist(self, view):
         """
@@ -294,6 +301,15 @@ class Views:
                              ])
         return phrase
 
+    def to_list(self):
+        return [self[k] for k in range(self._df.shape[0])]
+
+    def __len__(self):
+        return self._df.shape[0]
+
+    def __iter__(self):
+        return (self[k] for k in range(self._df.shape[0]))
+
 
 class PortfolioProblem:
 
@@ -306,26 +322,62 @@ class PortfolioProblem:
         self.portfolio = portfolio
         self.views = views
 
-    def post_ret100_k(self, k, tau=1.0):
+    def post_ret100_k(self, view_k, inplace=True, tau=1.0):
         """
         Calcule le rendement attendu de Black-litterman avec des vues ayant 100% de certitude
 
         Args:
-            k (int): view index
+            view_k (View object): single view to take in consideration
             tau (float, optional): tau est le scalaire à calibrer
 
         Returns:
-            TYPE: Description
+            TYPE: Portfolio if inplace=False
         """
 
         # Qk - pk Pi
+<<<<<<< HEAD
         X = self.views[k]['r'] - self.views[k]['P'].dot(self.portfolio.r)
         # inv(pk tau Sigma pk')
         PkPiPk_1 = 1. / self.views[k]['P'].dot(tau * self.portfolio.cov.dot(self.views[k]['P']))
         r_100 = self.portfolio.r + tau *  PkPiPk_1 * X*self.portfolio.cov.dot(self.views[k]['P']) 
         return r_100
+=======
+        X = self.view_k.r - self.view_k.P.dot(self.portfolio.r)
+        # inv(pk tau Sigma pk')
+        PkPiPk_1 = 1. / self.view_k.P.dot(
+            tau * self.portfolio.cov.dot(self.view_k.P))
+        r_100 = self.portfolio.r + tau * \
+            self.portfolio.cov.dot(self.view_k.P) * PkPiPk_1 * X
+        if inplace:
+            # new_portfolio is not a copy here but is just another name for self.portfolio
+            new_portfolio = self.portfolio
+        else:
+            new_portfolio = self.portfolio.deepcopy()
+        new_portfolio.r = r_100
+        # optimize weights wrt new expected returns, covariance not changed for r distribution
+        new_portfolio.optim_w()
+        if not inplace:
+            return new_portfolio
 
-    def post_ret100(self, tau=1.0):
+    def w_pk(self, view_k):
+        """
+        Calculate the w_%k, linear average between current weight in self.portfolio and weight
+        using view k with 100% confidence
+
+        Args:
+            view_k (View object): single view to take in consideration
+
+        Deleted Parameters:
+            inplace (bool, optional): Not sure if we need that
+        """
+        dummy_portfolio = self.post_ret100_k(view_k, inplace=False)
+        confidence_k = self.view_k.c
+        w_pk = self.portfolio.w + \
+            (dummy_portfolio.w - self.portfolio.w) * confidence_k
+        return w_pk
+>>>>>>> remotes/origin/master
+
+    def post_ret100(self, inplace=True, tau=1.0):
         """
         Calcule le rendement attendu de Black-litterman avec des vues ayant 100% de certitude
 
@@ -335,14 +387,7 @@ class PortfolioProblem:
         Returns:
             TYPE: Description
         """
-        X = self.views.df['r'] - np.dot(V.P, self.r).reshape(len(V.Q), 1)
-        PSPt = np.linalg.inv(np.dot(np.dot(V.P, 1 * self.cov), V.P.T))
-        Z = self.r + np.dot(tau * np.dot(self.cov, V.P.T),
-                            np.dot(PSPt, X)).reshape(V.P.shape[1])
-        copy = self.copy()
-        copy.r = Z
-        copy.optim_w()
-        return copy.r
+        print("NOT IMPLEMENTED")
 
     @staticmethod
     def f_k(omega, P, V, k, tau=1):
