@@ -290,15 +290,11 @@ class Views:
         """
         Default display of a Views object
         """
-        coeff_df = self._df.drop(['r', 'c'], axis=1)
-        phrase = "Views object with: \n"
-        phrase += "\n".join([Views.view_to_str(coeff_dict,
-                                               r,
-                                               c) for coeff_dict, r, c in zip(coeff_df.to_dict('record'),
-                                                                              self.df["r"],
-                                                                              self.df["c"])
 
-                             ])
+        phrase = "Views object with: \n"
+        for view in self:
+            phrase += str(view) + "\n"
+
         return phrase
 
     def to_list(self):
