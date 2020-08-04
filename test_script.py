@@ -10,7 +10,7 @@ port2 = Portfolio(d,
                       np.array([[1.2, -0.1], [-0.1, 0.3]]), columns=d.keys(), index=d.keys()),
                   kappa=0.1)
 
-v = Views()
+views = Views()
 df = pd.DataFrame(
     {
         'fixed_income': [0, 1, 1],
@@ -18,11 +18,10 @@ df = pd.DataFrame(
         'r': [0.05, 0.01, 0.01],
         'c': [1.0, 1.0, 1.5]
     })
-v.add_views(df)
+views.add_views(df)
 
 
-problem = PortfolioProblem(port2, v)
-# for k in range(len(v)):
-#     problem.post_ret100_k(k, )
+problem = PortfolioProblem(port2, views)
 
-print(v)
+for view in views:
+    problem.post_ret100_k(view)

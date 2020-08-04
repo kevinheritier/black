@@ -331,12 +331,12 @@ class PortfolioProblem:
         """
 
         # Qk - pk Pi
-        X = self.view_k.r - self.view_k.P.dot(self.portfolio.r)
+        X = view_k.r - view_k.P.dot(self.portfolio.r)
         # inv(pk tau Sigma pk')
-        PkPiPk_1 = 1. / self.view_k.P.dot(
-            tau * self.portfolio.cov.dot(self.view_k.P))
+        PkPiPk_1 = 1. / view_k.P.dot(
+            tau * self.portfolio.cov.dot(view_k.P))
         r_100 = self.portfolio.r + tau * \
-            self.portfolio.cov.dot(self.view_k.P) * PkPiPk_1 * X
+            self.portfolio.cov.dot(view_k.P) * PkPiPk_1 * X
         if inplace:
             # new_portfolio is not a copy here but is just another name for self.portfolio
             new_portfolio = self.portfolio
