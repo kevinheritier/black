@@ -102,7 +102,7 @@ class Portfolio():
         Args:
             inplace (bool, optional): override les poids dans l'instance si Vrai (default), output poids (np.array) sinon
         """
-        w = np.linalg.inv(self._cov.values) @ self.r.values
+        w = np.linalg.inv(self.kappa * self._cov.values) @ self.r.values
      # self.kappa = w.sum()
         if inplace:
             self._df.loc['w', :] = w
@@ -360,7 +360,7 @@ class PortfolioProblem:
             inplace (bool, optional): Not sure if we need that
         """
         dummy_portfolio = self.post_ret100_k(view_k, inplace=False)
-        confidence_k = self.view_k.c
+        confidence_k = view_k.c
         w_pk = self.portfolio.w + \
             (dummy_portfolio.w - self.portfolio.w) * confidence_k
         return w_pk
@@ -378,7 +378,7 @@ class PortfolioProblem:
         print("NOT IMPLEMENTED")
 
     @staticmethod
-    def f_k(omega, P, V, k, tau=1):
+    def f_k(omega, P, view_k,  tau=1):
         """
         param float omega: diagonal element of covariance matrix of error term
         param Portfolio P:
@@ -388,8 +388,11 @@ class PortfolioProblem:
 
         return square difference of new weights vs target weights
         """
+        prob = PortfolioProblem(P, view_k)
+        w_pk = prob.w_pk(view_k)
         InvSig = np.linalg.inv(tau * P.cov)
-        first_term = np.linalg.inv(InvSig + np.outer(V.P[k], V.P[k]) / omega)
-        second_term = np.dot(InvSig, P.r) - V.P[k] * V.Q[k] / omega
+        first_term = np.linalg.inv(
+            InvSig + np.outer(view_k.P, view_k.P) / omega)
+        second_term = np.dot(InvSig, P.r) - view_k.P * view_k.r / omega
         w_k = np.linalg.inv(P.kappa * P.cov).dot(first_term.dot(second_term))
-        return np.linalg.norm(P.w_pk(V, k) - w_k)
+        return np.linalg.norm(w_pk - w_k)
