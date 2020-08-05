@@ -102,7 +102,7 @@ class Portfolio():
         Args:
             inplace (bool, optional): override les poids dans l'instance si Vrai (default), output poids (np.array) sinon
         """
-        w = np.linalg.inv(self._cov.values) @ self.r.values
+        w = np.linalg.inv(self.kappa * self._cov.values) @ self.r.values
      # self.kappa = w.sum()
         if inplace:
             self._df.loc['w', :] = w
@@ -360,7 +360,7 @@ class PortfolioProblem:
             inplace (bool, optional): Not sure if we need that
         """
         dummy_portfolio = self.post_ret100_k(view_k, inplace=False)
-        confidence_k = self.view_k.c
+        confidence_k = view_k.c
         w_pk = self.portfolio.w + \
             (dummy_portfolio.w - self.portfolio.w) * confidence_k
         return w_pk
@@ -378,7 +378,7 @@ class PortfolioProblem:
         print("NOT IMPLEMENTED")
 
     @staticmethod
-    def f_k(omega, P, V, k, tau=1):
+    def f_k(omega, P, view_k, tau=1):
         """
         param float omega: diagonal element of covariance matrix of error term
         param Portfolio P:
@@ -388,67 +388,16 @@ class PortfolioProblem:
 
         return square difference of new weights vs target weights
         """
+
+        # Il faut probablement modifier le Sigma posterior
+
+        prob = PortfolioProblem(P, view_k)
+        w_pk = prob.w_pk(view_k)
         InvSig = np.linalg.inv(tau * P.cov)
-        first_term = np.linalg.inv(InvSig + np.outer(V.P[k], V.P[k]) / omega)
-        second_term = np.dot(InvSig, P.r) - V.P[k] * V.Q[k] / omega
-        w_k = np.linalg.inv(P.kappa * P.cov).dot(first_term.dot(second_term))
-        return np.linalg.norm(P.w_pk(V, k) - w_k)
-
-
-# Vue basique, sans prise en compte de confiance
-
-class ViewsA:
-    def __init__(self, Port):
-        self.P = None
-        self.Q = None
-        self.Ome = None
-        self.Port = Port
-
-    # ajoute une vue
-    def add(self, name, w_v, r_v):
-        X = np.zeros((1, len(self.Port.assets)))
-        i = 0
-        for n in name:
-            X[0, self.Port.assets.index(n)] = w_v[i]
-            i = i + 1
-
-        if self.P is None:
-            self.P = X
-        else:
-            self.P = np.vstack((self.P, X))
-
-        if self.Q is None:
-            self.Q = np.array([[r_v]])
-        else:
-            self.Q = np.vstack((self.Q, np.array([[r_v]])))
-
-        omega = np.dot(X, np.dot(self.Port.cov, X.T))
-
-        if self.Ome is None:
-            self.Ome = omega
-        else:
-            self.Ome = np.block([[self.Ome, np.zeros((np.shape(self.Ome)[0], 1))], [
-                np.zeros((1, np.shape(self.Ome)[0])), omega]])
-
-
-if __name__ == "__main__":
-
-    d = {
-        'equities': dict(r=0.07),
-        'fixed_income': dict(r=0.03),
-    }
-
-    port2 = Portfolio(d,
-                      cov=pd.DataFrame(
-                          np.array([[1.2, -0.1], [-0.1, 0.3]]), columns=d.keys(), index=d.keys()),
-                      kappa=0.1)
-    v = Views()
-    df = pd.DataFrame(
-        {
-            'fixed_income': [0, 1, 1],
-            'equities': [1, 0, 0],
-            'r': [0.05, 0.01, 0.01],
-            'c': [0.5, 0.5, 0.5]
-        })
-
-    v.add_views(df)
+        first_term = np.linalg.inv(
+            InvSig + np.outer(view_k.P, view_k.P) / omega)
+        second_term = np.dot(InvSig, P.r) + view_k.P * view_k.r / omega
+        new_cov = P.cov + first_term
+        w_k = np.linalg.solve(
+            P.kappa * new_cov, np.dot(first_term, second_term))
+        return np.linalg.norm(w_pk - w_k)
