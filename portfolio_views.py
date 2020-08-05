@@ -378,7 +378,7 @@ class PortfolioProblem:
         print("NOT IMPLEMENTED")
 
     @staticmethod
-    def f_k(omega, P, view_k,  tau=1):
+    def f_k(omega, P, view_k, tau=1):
         """
         param float omega: diagonal element of covariance matrix of error term
         param Portfolio P:
@@ -388,11 +388,16 @@ class PortfolioProblem:
 
         return square difference of new weights vs target weights
         """
+
+        # Il faut probablement modifier le Sigma posterior
+
         prob = PortfolioProblem(P, view_k)
         w_pk = prob.w_pk(view_k)
         InvSig = np.linalg.inv(tau * P.cov)
         first_term = np.linalg.inv(
             InvSig + np.outer(view_k.P, view_k.P) / omega)
-        second_term = np.dot(InvSig, P.r) - view_k.P * view_k.r / omega
-        w_k = np.linalg.inv(P.kappa * P.cov).dot(first_term.dot(second_term))
+        second_term = np.dot(InvSig, P.r) + view_k.P * view_k.r / omega
+        new_cov = P.cov + first_term
+        w_k = np.linalg.solve(
+            P.kappa * new_cov, np.dot(first_term, second_term))
         return np.linalg.norm(w_pk - w_k)
