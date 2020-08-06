@@ -31,8 +31,7 @@ problem = PortfolioProblem(port2, views)
 print(problem.w_pk(views[0]))
 print(problem.w_pk(views[1]))
 #print(problem.f_k(0.3, port2, views[0]))
-Omega = np.diag([minimize(problem.f_k, 0.3, args=(port2, v)).x[0]
-                 for v in views])
+Omega = problem.compute_Omega()
 print(Omega)
 
 InvSig = np.linalg.inv(1 * port2.cov)

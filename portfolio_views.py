@@ -378,7 +378,7 @@ class PortfolioProblem:
         print("NOT IMPLEMENTED")
 
     @staticmethod
-    def f_k(omega, P, view_k, tau=1):
+    def f_k(omega, pproblem, view_k, tau=1):
         """
         param float omega: diagonal element of covariance matrix of error term
         param Portfolio P:
@@ -391,13 +391,44 @@ class PortfolioProblem:
 
         # Il faut probablement modifier le Sigma posterior
 
-        prob = PortfolioProblem(P, view_k)
-        w_pk = prob.w_pk(view_k)
-        InvSig = np.linalg.inv(tau * P.cov)
+        w_pk = pproblem.w_pk(view_k)
+        InvSig = np.linalg.inv(tau * pproblem.portfolio.cov)
         first_term = np.linalg.inv(
             InvSig + np.outer(view_k.P, view_k.P) / omega)
-        second_term = np.dot(InvSig, P.r) + view_k.P * view_k.r / omega
-        new_cov = P.cov + first_term
+        second_term = np.dot(InvSig, pproblem.portfolio.r) + \
+            view_k.P * view_k.r / omega
+        new_cov = pproblem.portfolio.cov + first_term  # c'est le sigma "star" ?
         w_k = np.linalg.solve(
-            P.kappa * new_cov, np.dot(first_term, second_term))
+            pproblem.portfolio.kappa * new_cov, np.dot(first_term, second_term))
         return np.linalg.norm(w_pk - w_k)
+
+    @staticmethod
+    def f(omegas, pproblem, tau=1):
+        """
+        returns list of difference in norm between w_pk and w_k, given a portfolio problem and list of omegas
+
+        Args:
+            omegas (iterable):
+            pproblem (PortfolioProblem object):
+            tau (int, optional):
+
+        Returns:
+            TYPE: list of outputs of f_k given the portfolio problem
+        """
+        return np.linalg.norm([PortfolioProblem.f_k(omega, pproblem, view, tau=tau) for omega, view in zip(omegas, pproblem.views)])
+
+    def compute_Omega(self, tau=1.0):
+        """
+        Calculate optimal omegas given the portfolio problem
+
+        Args:
+            tau (float, optional): Description
+
+        Returns:
+            np.array: omega matrix
+        """
+        # initial guesses
+        omegas_0 = np.ones(len(self.views)) * 0.1
+        omegas_star = minimize(
+            PortfolioProblem.f, omegas_0, args=(self, tau)).x
+        return np.diag(omegas_star)
