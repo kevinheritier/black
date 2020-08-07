@@ -397,7 +397,7 @@ class PortfolioProblem:
             InvSig + np.outer(view_k.P, view_k.P) / omega)
         second_term = np.dot(InvSig, pproblem.portfolio.r) + \
             view_k.P * view_k.r / omega
-        new_cov = pproblem.portfolio.cov + first_term  # c'est le sigma "star" ?
+        new_cov = pproblem.portfolio.cov  # + first_term  # c'est le sigma "star" ? Oui
         w_k = np.linalg.solve(
             pproblem.portfolio.kappa * new_cov, np.dot(first_term, second_term))
         return np.linalg.norm(w_pk - w_k)
@@ -417,7 +417,7 @@ class PortfolioProblem:
         """
         return np.linalg.norm([PortfolioProblem.f_k(omega, pproblem, view, tau=tau) for omega, view in zip(omegas, pproblem.views)])
 
-    def compute_Omega(self, tau=1.0):
+    def compute_Omega(self, tau=1):
         """
         Calculate optimal omegas given the portfolio problem
 
