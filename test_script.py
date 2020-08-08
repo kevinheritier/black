@@ -1,4 +1,4 @@
-from portfolio_views import *
+from analytics.portfolio_views import *
 
 d = {
     'equities': dict(r=0.1),
