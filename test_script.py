@@ -41,7 +41,8 @@ second_term = np.dot(InvSig, port2.r) + \
     np.dot(views.P.T, InvOme).dot(views.df.r)
 E = np.dot(first_term, second_term)
 print(E)
-NCov = port2.cov + \
-    np.linalg.inv(InvSig + np.dot(views.P.T, InvOme).dot(views.P))
+NCov = port2.cov
+#+ \
+#    np.linalg.inv(InvSig + np.dot(views.P.T, InvOme).dot(views.P))
 print(NCov)
 print(np.linalg.solve(port2.kappa * NCov, E))

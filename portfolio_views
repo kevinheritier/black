@@ -1,0 +1,33 @@
+INFO:root:Setting up optimization for portfolio:
+               equities  fixed_income
+r       0.1          0.05
+w       0.5          0.50
+            and views:
+            Views object with: 
+100.0% equities 0.0% fixed_income with expected return 5.0% (confidence: 50.0%)
+100.0% equities -100.0% fixed_income with expected return 0.5% (confidence: 100.0%)
+
+INFO:root:Optimization terminated successfully.
+INFO:root:Setting up optimization for portfolio:
+               equities  fixed_income
+r       0.1          0.05
+w       0.5          0.50
+            and views:
+            Views object with: 
+100.0% equities 0.0% fixed_income with expected return 5.0% (confidence: 50.0%)
+100.0% equities -100.0% fixed_income with expected return 0.5% (confidence: 100.0%)
+
+INFO:root:Optimization terminated successfully.
+INFO:root:Setting up optimization for portfolio:
+               equities  fixed_income
+r       0.1          0.05
+w       0.5          0.50
+            and views:
+            Views object with: 
+100.0% equities 0.0% fixed_income with expected return 5.0% (confidence: 50.0%)
+100.0% equities -100.0% fixed_income with expected return 0.5% (confidence: 100.0%)
+
+INFO:root:Optimization terminated successfully.
+WARNING:root:omegas must be strictly different than zero: [0.28 0.  ]
+WARNING:root:omegas must be strictly different than zero: [0.28 0.  ]
+WARNING:root:omegas must be strictly different than zero: [0.28 0.  ]
