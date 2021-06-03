@@ -2,12 +2,15 @@ import numpy as np
 import scipy as sc
 import pandas as pd
 import openpyxl as ox
-from scipy.optimize import minimize
+from scipy.optimize import minimize, fmin_bfgs
 import enum
 from collections.abc import Iterable
 from collections import namedtuple
 import copy
-
+# logging.basicConfig(filename=__name__, level=logging.DEBUG)
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class Portfolio():
 
@@ -35,7 +38,7 @@ class Portfolio():
     @df.setter
     def df(self, data):
         if not (isinstance(data, dict) or isinstance(data, pd.DataFrame)):
-            raise ValueError(
+            logging.error(
                 "Invalid type: data must be either dataframe or dict with name of assets as keys")
 
         if isinstance(data, dict):
@@ -64,13 +67,13 @@ class Portfolio():
     def cov(self, cov):
         if cov is not None:
             if not isinstance(cov, pd.DataFrame):
-                raise ValueError(
+                logging.error(
                     "Covariance dataframe {} must be symmetric with same index and columns names".format(cov))
             if (cov.index != cov.columns).all():
-                raise ValueError(
+                logging.error(
                     "Covariance indices: {} must be equal to covariance columns: {}").format(cov.index, cov.columns)
             if not cov.equals(cov.transpose()):
-                raise ValueError(
+                logging.error(
                     "Covariance dataframe {} must be symmetric".format(cov))
             self._cov = cov
 
@@ -216,7 +219,7 @@ class Views:
 
         if 'c' not in df.columns:
             # Assume 100% confience if 'c' column does not exist
-            print("Warning: assuming 100% confidence for view(s)")
+            logging.info("Warning: assuming 100% confidence for view(s)")
             df['c'] = 1.
 
         # add views to existing ones
@@ -225,10 +228,10 @@ class Views:
         # Remove duplicates
         df_dup = self._df[self._df.duplicated()]
         if len(df_dup) > 0:
-            print("Following view(s) already exist:")
+            logging.info("Following view(s) already exist:")
             for coeff, r, c in zip(df_dup.drop(['r', 'c'], axis=1).to_dict('records'), df_dup['r'], df_dup['c']):
                 print(Views.view_to_str(coeff, r, c))
-            print("Dropping duplicates")
+            logging.info("Dropping duplicates")
             self._df = self._df.drop_duplicates()
 
         self._df.reset_index(drop=True, inplace=True)
@@ -397,7 +400,11 @@ class PortfolioProblem:
             InvSig + np.outer(view_k.P, view_k.P) / omega)
         second_term = np.dot(InvSig, pproblem.portfolio.r) + \
             view_k.P * view_k.r / omega
+<<<<<<< HEAD:portfolio_views.py
         new_cov = pproblem.portfolio.cov  # + first_term  # c'est le sigma "star" ? Oui
+=======
+        new_cov = pproblem.portfolio.cov  # c'est le sigma "star" ?
+>>>>>>> d992f530c3e2ded2ee8755d7f10e8cb227b95113:analytics/portfolio_views.py
         w_k = np.linalg.solve(
             pproblem.portfolio.kappa * new_cov, np.dot(first_term, second_term))
         return np.linalg.norm(w_pk - w_k)
@@ -419,16 +426,85 @@ class PortfolioProblem:
 
     def compute_Omega(self, tau=1):
         """
-        Calculate optimal omegas given the portfolio problem
+        Calculate optimal omegas given the portfolio problem using Nelder-Mead optimization
 
         Args:
             tau (float, optional): Description
 
         Returns:
-            np.array: omega matrix
+            np.array (2D): Omega matrix
         """
         # initial guesses
         omegas_0 = np.ones(len(self.views)) * 0.1
-        omegas_star = minimize(
-            PortfolioProblem.f, omegas_0, args=(self, tau)).x
-        return np.diag(omegas_star)
+        logging.info("""Setting up optimization for portfolio:
+            {}
+            and views:
+            {}""".format(self.portfolio.df, self.views))
+        result = minimize(PortfolioProblem.f, omegas_0,
+                          args=(self, tau), method='Nelder-Mead')
+        if result.success:
+            logging.info(result.message)
+            return result.x
+        else:
+            logging.error(result.message + "{}".format(result))
+
+    def compute_Omega_analytical(self, tau=1.0):
+        """
+        Calculate optmal omegas using analytical method (Walters et al., 2007)
+
+        Args:
+            tau (float, optional): Description
+
+        Returns:
+            np.array (2D): Omega matrix
+        """
+        if all(self.views.df.c.values < 0) or all(self.views.df.c.values > 1):
+            logging.error(
+                "Confidence in views: {} must be strictly between 0 and 1".format(self.views.df.c.values))
+        alphas = np.array([(1.0 - view.c) / (view.c) for view in self.views])
+        omegas_star = np.array([alpha * (view.P @ self.portfolio.cov).dot(view.P)
+                                for alpha, view in zip(alphas, self.views)])
+        return omegas_star
+
+    def compute_new_returns(self, omegas):
+        """
+
+        Args:
+            omegas (TYPE): Description
+        """
+        if any(omegas == 0):
+            logging.warning(
+                "omegas must be strictly different than zero: {}".format(omegas))
+        sigma_inv = np.linalg.inv(self.portfolio.cov)
+        try:
+            omega_inv = np.diag(1. / omegas)
+        except (AssertionError, TypeError) as e:
+            logging.error(e)
+            raise e
+        first_term = np.linalg.inv(
+            sigma_inv + np.dot(self.views.P.T, omega_inv).dot(self.views.P))
+        second_term = np.dot(sigma_inv, self.portfolio.r) + \
+            np.dot(self.views.P.T, omega_inv).dot(self.views.df.r)
+
+        return first_term @ second_term
+
+    def post_portfolio(self, omega_analytical=True, tau=1.0):
+        """
+        Return the new portfolio taking into account the views of the portfolio problem
+
+        Args:
+            omega_analytical (bool, optional): Use analytical (Default) or optimization method
+            tau (float, optional):
+
+        Returns:
+            portfolio object: new porfolio
+        """
+        if omega_analytical:
+            omegas = self.compute_Omega_analytical(tau)
+        else:
+            omegas = self.compute_Omega(tau)
+        E_r = self.compute_new_returns(omegas)
+        new_portfolio = copy.deepcopy(self.portfolio)
+        new_portfolio.r = E_r
+        new_portfolio.optim_w()
+        return new_portfolio

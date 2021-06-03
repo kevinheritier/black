@@ -1,4 +1,4 @@
-from portfolio_views import *
+from analytics.portfolio_views import *
 
 d = {
     'equities': dict(r=0.1),
@@ -46,7 +46,15 @@ second_term = np.dot(InvSig, port2.r) + \
     np.dot(views.P.T, InvOme).dot(views.df.r)
 E = np.dot(first_term, second_term)
 print(E)
+<<<<<<< HEAD
 # NCov = port2.cov + \
 #     np.linalg.inv(InvSig + np.dot(views.P.T, InvOme).dot(views.P))
 # print(NCov)
 print(np.linalg.solve(port2.kappa * port2.cov, E))
+=======
+NCov = port2.cov
+#+ \
+#    np.linalg.inv(InvSig + np.dot(views.P.T, InvOme).dot(views.P))
+print(NCov)
+print(np.linalg.solve(port2.kappa * NCov, E))
+>>>>>>> d992f530c3e2ded2ee8755d7f10e8cb227b95113
