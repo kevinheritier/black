@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 
 class Portfolio():
 
-    def __init__(self, data, cov=None, kappa=None):
+    def __init__(self, data=None, cov=None, kappa=None):
         """
         Create a portoflio object with assets allocation, returns, covariance matrix.
 
@@ -23,9 +23,9 @@ class Portfolio():
             cov (dict or pd.DataFrame): covariane dataframe, default is no correlation (identity matrix)
             kappa (float): Risk reversion parameter
         """
-
-        self.df = data
-        self.cov = cov
+        if data is not None:
+            self.df = data
+            self.cov = cov
         self.kappa = 1
 
     @property
@@ -43,6 +43,8 @@ class Portfolio():
 
         if isinstance(data, dict):
             self._df = pd.DataFrame(data)
+        else:
+            self._df = data
 
         if 'r' not in self._df.index:
             if 'r' in self._df.columns:
@@ -93,6 +95,16 @@ class Portfolio():
     @property
     def r(self):
         return self._df.loc['r', :]
+
+    def read_xlsx_ptf(self, path, r_name='r', w_name='w', sheet_name=0):
+        df = pd.read_excel(path, sheet_name=sheet_name, index_col=0)
+        df = df.rename(index={r_name: 'r', 
+                                w_name:'w'})
+        self.df = df
+
+    def read_xlsx_cov(self, path, sheet_name=1):
+        df = pd.read_excel(path, sheet_name=sheet_name, index_col=0)
+        self.cov = df
 
     @r.setter
     def r(self, r):
@@ -308,6 +320,13 @@ class Views:
 
     def __iter__(self):
         return (self[k] for k in range(self._df.shape[0]))
+
+    def read_xlsx_views(self, path, r_name='r', c_name='c', sheet_name=2):
+        df = pd.read_excel(path, sheet_name=sheet_name)
+        df = df.rename(columns={r_name: 'r', 
+                                c_name: 'c'})
+        self.add_views(df)
+
 
 
 class PortfolioProblem:
