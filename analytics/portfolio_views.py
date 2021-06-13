@@ -523,3 +523,16 @@ class PortfolioProblem:
         new_portfolio.r = E_r
         new_portfolio.optim_w()
         return new_portfolio
+
+    @classmethod
+    def read_xlsx_full_problem(cls, file_path, ptf_sheet=0, cov_sheet=1, views_sheet=2):
+        ptf = Portfolio()
+        ptf.read_xlsx_ptf(file_path, r_name='R', w_name='W', sheet_name=ptf_sheet)
+        ptf.read_xlsx_cov(file_path, shet_name=cov_sheet)
+        views = Views()
+        views.read_xlsx_views(file_path, r_name='R', c_name='C', sheet_name=views_sheet)
+        return PortfolioProblem(ptf, views)
+
+
+
+
