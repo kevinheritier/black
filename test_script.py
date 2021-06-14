@@ -1,4 +1,6 @@
 from analytics.portfolio_views import *
+import time
+
 
 file_path = 'ProblemTest.xlsx'
 views = Views()
@@ -6,9 +8,12 @@ views.read_xlsx_views(file_path, r_name='R', c_name='C')
 ptf = Portfolio()
 ptf.read_xlsx_ptf(file_path, r_name='R', w_name='W')
 ptf.read_xlsx_cov(file_path)
+print(ptf.df)
+print(views)
 
 problem = PortfolioProblem(ptf, views)
-new_ptf = problem.post_portfolio()
+new_ptf = problem.post_portfolio(omega_analytical=True)
+
 print(new_ptf.df)
 
 # d = {

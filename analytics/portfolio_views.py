@@ -12,6 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class Portfolio():
 
     def __init__(self, data=None, cov=None, kappa=None):
@@ -26,6 +27,9 @@ class Portfolio():
         if data is not None:
             self.df = data
             self.cov = cov
+        else:
+            self._df = None
+            self._cov = None
         self.kappa = 1
 
     @property
@@ -98,8 +102,8 @@ class Portfolio():
 
     def read_xlsx_ptf(self, path, r_name='r', w_name='w', sheet_name=0):
         df = pd.read_excel(path, sheet_name=sheet_name, index_col=0)
-        df = df.rename(index={r_name: 'r', 
-                                w_name:'w'})
+        df = df.rename(index={r_name: 'r',
+                              w_name: 'w'})
         self.df = df
 
     def read_xlsx_cov(self, path, sheet_name=1):
@@ -118,7 +122,7 @@ class Portfolio():
             inplace (bool, optional): override les poids dans l'instance si Vrai (default), output poids (np.array) sinon
         """
         w = np.linalg.inv(self.kappa * self._cov.values) @ self.r.values
-     # self.kappa = w.sum()
+        # self.kappa = w.sum()
         if inplace:
             self._df.loc['w', :] = w
         else:
@@ -201,6 +205,8 @@ class View(namedtuple('View', 'P r c')):
         return Views.view_to_str(self.P.to_dict(), self.r, self.c)
 
 # Multiple views class
+
+
 class Views:
 
     def __init__(self, views={}):
@@ -233,6 +239,12 @@ class Views:
             # Assume 100% confience if 'c' column does not exist
             logging.info("Warning: assuming 100% confidence for view(s)")
             df['c'] = 1.
+
+        # drop null views
+        if 0. in df['c']:
+            logging.warning("""Dropping views with 0% confidence: 
+            {}""".format(df[df['c'] == 0.]))
+            df = df[df['c'] != 0.]
 
         # add views to existing ones
         self._df = self._df.append(df)
@@ -323,15 +335,14 @@ class Views:
 
     def read_xlsx_views(self, path, r_name='r', c_name='c', sheet_name=2):
         df = pd.read_excel(path, sheet_name=sheet_name)
-        df = df.rename(columns={r_name: 'r', 
+        df = df.rename(columns={r_name: 'r',
                                 c_name: 'c'})
         self.add_views(df)
 
 
-
 class PortfolioProblem:
 
-    def __init__(self, portfolio, views):
+    def __init__(self, portfolio=None, views=None):
         """
         param Portfolio portfolio: portfolio containing names, returns, covariance and kappa
         param Views views: View object with P, Q matrices and confidence
@@ -481,27 +492,37 @@ class PortfolioProblem:
                                 for alpha, view in zip(alphas, self.views)])
         return omegas_star
 
-    def compute_new_returns(self, omegas):
-        """
+    def compute_new_returns(self, omegas, tau=1, alt=True):
+        """Compute new returns from optimal omegas and the current portfolio and views.
 
         Args:
-            omegas (TYPE): Description
-        """
-        if any(omegas == 0):
-            logging.warning(
-                "omegas must be strictly different than zero: {}".format(omegas))
-        sigma_inv = np.linalg.inv(self.portfolio.cov)
-        try:
-            omega_inv = np.diag(1. / omegas)
-        except (AssertionError, TypeError) as e:
-            logging.error(e)
-            raise e
-        first_term = np.linalg.inv(
-            sigma_inv + np.dot(self.views.P.T, omega_inv).dot(self.views.P))
-        second_term = np.dot(sigma_inv, self.portfolio.r) + \
-            np.dot(self.views.P.T, omega_inv).dot(self.views.df.r)
+            omegas (iterator): Optimal omegas
+            tau (int, optional): [description]. Defaults to 1.
+            alt (bool, optional): [description]. Defaults to True.
 
-        return first_term @ second_term
+        Returns:
+            np.array: Array of posterior optimal returns 
+        """
+
+        sigma_inv = np.linalg.inv(tau * self.portfolio.cov)
+        if not alt:
+            if any(omegas == 0):
+                logging.error(
+                    "omegas must be strictly different than zero: {}".format(omegas))
+            omega_inv = np.diag(1.0/omegas)
+            first_term = np.linalg.inv(sigma_inv + np.dot(self.views.P.T, omega_inv).dot(self.views.P))
+            second_term = np.dot(sigma_inv, self.portfolio.r) + np.dot(self.views.P.T, omega_inv).dot(self.views.df.r)
+            return first_term @ second_term
+
+        else:
+            # See appendix A of polovenko
+            omega = np.diag(omegas)
+            first_term = self.portfolio.r 
+            second_term = tau * self.portfolio.cov @ self.views.P.T
+            third_term = np.linalg.inv(self.views.P @ (tau * self.portfolio.cov) @ self.views.P.T + omega)
+            fourth_term = self.views.df.r - self.views.P @ self.portfolio.r      
+            return first_term + second_term @ third_term @ fourth_term
+
 
     def post_portfolio(self, omega_analytical=True, tau=1.0):
         """
@@ -522,17 +543,15 @@ class PortfolioProblem:
         new_portfolio = copy.deepcopy(self.portfolio)
         new_portfolio.r = E_r
         new_portfolio.optim_w()
+        self.new_portfolio = new_portfolio
         return new_portfolio
 
-    @classmethod
-    def read_xlsx_full_problem(cls, file_path, ptf_sheet=0, cov_sheet=1, views_sheet=2):
+    def read_xlsx_full_problem(self, file_path, ptf_sheet=0, cov_sheet=1, views_sheet=2):
         ptf = Portfolio()
-        ptf.read_xlsx_ptf(file_path, r_name='R', w_name='W', sheet_name=ptf_sheet)
-        ptf.read_xlsx_cov(file_path, shet_name=cov_sheet)
+        ptf.read_xlsx_ptf(file_path, r_name='R',
+                          w_name='W', sheet_name=ptf_sheet)
+        ptf.read_xlsx_cov(file_path, sheet_name=cov_sheet)
+        self.portfolio = ptf
         views = Views()
-        views.read_xlsx_views(file_path, r_name='R', c_name='C', sheet_name=views_sheet)
-        return PortfolioProblem(ptf, views)
-
-
-
-
+        self.views = views.read_xlsx_views(
+            file_path, r_name='R', c_name='C', sheet_name=views_sheet)
