@@ -3,18 +3,28 @@ import time
 
 
 file_path = 'ProblemTest.xlsx'
+file_path_Portfolio = 'ProblemTest - Portfolio.csv'
+file_path_VCV = 'ProblemTest - VCV Matrix.csv'
+file_path_views = 'ProblemTest - Views.csv'
 views = Views()
-views.read_xlsx_views(file_path, r_name='R', c_name='C')
-ptf = Portfolio()
-ptf.read_xlsx_ptf(file_path, r_name='R', w_name='W')
-ptf.read_xlsx_cov(file_path)
-print(ptf.df)
-print(views)
+views.read_csv_views(file_path_views, r_name='R', c_name='C')
+ptf2 = Portfolio()
+Tata = pd.read_excel(file_path, sheet_name=2)
+Toto = pd.read_csv(file_path_views)
+print(Toto)
+print(Tata)
+print(views._df)
+#ptf2.read_csv_ptf(file_path_Portfolio, r_name='R', w_name='W')
+# ptf2.read_csv_cov(file_path_VCV)
+# ptf.optim_w()
+# print(ptf2.df)
+# print(ptf2._cov)
+# print(views)
 
-problem = PortfolioProblem(ptf, views)
-new_ptf = problem.post_portfolio(omega_analytical=True)
+#problem = PortfolioProblem(ptf, views)
+#new_ptf = problem.post_portfolio(omega_analytical=True)
 
-print(new_ptf.df)
+# print(new_ptf.df)
 
 # d = {
 #     'equities': dict(r=0.1),

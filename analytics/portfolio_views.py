@@ -106,8 +106,18 @@ class Portfolio():
                               w_name: 'w'})
         self.df = df
 
+    def read_csv_ptf(self, path, r_name='r', w_name='w'):
+        df = pd.read_csv(path, index_col=0)
+        df = df.rename(index={r_name: 'r',
+                              w_name: 'w'})
+        self.df = df
+
     def read_xlsx_cov(self, path, sheet_name=1):
         df = pd.read_excel(path, sheet_name=sheet_name, index_col=0)
+        self.cov = df
+
+    def read_csv_cov(self, path):
+        df = pd.read_csv(path, index_col=0)
         self.cov = df
 
     @r.setter
@@ -242,7 +252,7 @@ class Views:
 
         # drop null views
         if 0. in df['c']:
-            logging.warning("""Dropping views with 0% confidence: 
+            logging.warning("""Dropping views with 0% confidence:
             {}""".format(df[df['c'] == 0.]))
             df = df[df['c'] != 0.]
 
@@ -335,6 +345,12 @@ class Views:
 
     def read_xlsx_views(self, path, r_name='r', c_name='c', sheet_name=2):
         df = pd.read_excel(path, sheet_name=sheet_name)
+        df = df.rename(columns={r_name: 'r',
+                                c_name: 'c'})
+        self.add_views(df)
+
+    def read_csv_views(self, path, r_name='r', c_name='c'):
+        df = pd.read_csv(path)
         df = df.rename(columns={r_name: 'r',
                                 c_name: 'c'})
         self.add_views(df)
@@ -501,7 +517,7 @@ class PortfolioProblem:
             alt (bool, optional): [description]. Defaults to True.
 
         Returns:
-            np.array: Array of posterior optimal returns 
+            np.array: Array of posterior optimal returns
         """
 
         sigma_inv = np.linalg.inv(tau * self.portfolio.cov)
@@ -509,20 +525,22 @@ class PortfolioProblem:
             if any(omegas == 0):
                 logging.error(
                     "omegas must be strictly different than zero: {}".format(omegas))
-            omega_inv = np.diag(1.0/omegas)
-            first_term = np.linalg.inv(sigma_inv + np.dot(self.views.P.T, omega_inv).dot(self.views.P))
-            second_term = np.dot(sigma_inv, self.portfolio.r) + np.dot(self.views.P.T, omega_inv).dot(self.views.df.r)
+            omega_inv = np.diag(1.0 / omegas)
+            first_term = np.linalg.inv(
+                sigma_inv + np.dot(self.views.P.T, omega_inv).dot(self.views.P))
+            second_term = np.dot(sigma_inv, self.portfolio.r) + \
+                np.dot(self.views.P.T, omega_inv).dot(self.views.df.r)
             return first_term @ second_term
 
         else:
             # See appendix A of polovenko
             omega = np.diag(omegas)
-            first_term = self.portfolio.r 
+            first_term = self.portfolio.r
             second_term = tau * self.portfolio.cov @ self.views.P.T
-            third_term = np.linalg.inv(self.views.P @ (tau * self.portfolio.cov) @ self.views.P.T + omega)
-            fourth_term = self.views.df.r - self.views.P @ self.portfolio.r      
+            third_term = np.linalg.inv(
+                self.views.P @ (tau * self.portfolio.cov) @ self.views.P.T + omega)
+            fourth_term = self.views.df.r - self.views.P @ self.portfolio.r
             return first_term + second_term @ third_term @ fourth_term
-
 
     def post_portfolio(self, omega_analytical=True, tau=1.0):
         """
