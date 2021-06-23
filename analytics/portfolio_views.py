@@ -126,13 +126,17 @@ class Portfolio():
 
     def optim_w(self, inplace=True):
         """
-        Calcule les poids optimaux avec une matrice de covariance et des sur-rendements
+        Calcule les poids optimaux avec une matrice de covariance et des primes de risque
 
         Args:
             inplace (bool, optional): override les poids dans l'instance si Vrai (default), output poids (np.array) sinon
+
+        Faut il utiliser utiliser linalg inv ou linalg solve pour aller plus vite ?
+
         """
+        notional = sum(self._df.loc['w'])
         w = np.linalg.inv(self.kappa * self._cov.values) @ self.r.values
-        # self.kappa = w.sum()
+        w = w * notional / sum(w)
         if inplace:
             self._df.loc['w', :] = w
         else:
@@ -504,7 +508,7 @@ class PortfolioProblem:
             logging.error(
                 "Confidence in views: {} must be strictly between 0 and 1".format(self.views.df.c.values))
         alphas = np.array([(1.0 - view.c) / (view.c) for view in self.views])
-        omegas_star = np.array([alpha * (view.P @ self.portfolio.cov).dot(view.P)
+        omegas_star = np.array([tau * alpha * (view.P @ self.portfolio.cov).dot(view.P)
                                 for alpha, view in zip(alphas, self.views)])
         return omegas_star
 
@@ -557,7 +561,7 @@ class PortfolioProblem:
             omegas = self.compute_Omega_analytical(tau)
         else:
             omegas = self.compute_Omega(tau)
-        E_r = self.compute_new_returns(omegas)
+        E_r = self.compute_new_returns(omegas, tau)
         new_portfolio = copy.deepcopy(self.portfolio)
         new_portfolio.r = E_r
         new_portfolio.optim_w()

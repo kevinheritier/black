@@ -1,5 +1,6 @@
 from analytics.portfolio_views import *
 import time
+import matplotlib.pyplot as plt
 
 
 file_path = 'ProblemTest.xlsx'
@@ -8,67 +9,55 @@ file_path_VCV = 'ProblemTest - VCV Matrix.csv'
 file_path_views = 'ProblemTest - Views.csv'
 views = Views()
 views.read_csv_views(file_path_views, r_name='R', c_name='C')
-ptf2 = Portfolio()
-Tata = pd.read_excel(file_path, sheet_name=2)
-Toto = pd.read_csv(file_path_views)
-print(Toto)
-print(Tata)
-print(views._df)
-#ptf2.read_csv_ptf(file_path_Portfolio, r_name='R', w_name='W')
-# ptf2.read_csv_cov(file_path_VCV)
-# ptf.optim_w()
-# print(ptf2.df)
-# print(ptf2._cov)
-# print(views)
+ptf = Portfolio()
+# print(views._df)
+ptf.read_csv_ptf(file_path_Portfolio, r_name='R', w_name='W')
+ptf.read_csv_cov(file_path_VCV)
+# print(ptf.df)
+# print(ptf._cov)
+ptf.optim_w()
+# print(ptf.df)
+# print(ptf._cov)
 
-#problem = PortfolioProblem(ptf, views)
-#new_ptf = problem.post_portfolio(omega_analytical=True)
+# print(ptf.df)
+
+# print(sum(ptf.df.loc['w']))
+
+
+problem = PortfolioProblem(ptf, views)
+new_ptf = problem.post_portfolio(omega_analytical=True, tau=1)
+#new_ptf2 = problem.post_portfolio(omega_analytical=True, tau=0.02)
 
 # print(new_ptf.df)
+# print(new_ptf2.df)
 
-# d = {
-#     'equities': dict(r=0.1),
-#     'fixed_income': dict(r=0.05),
-# }
+fig, (axr, axw) = plt.subplots(2, 1)
 
-# port2 = Portfolio(d,
-#                   cov=pd.DataFrame(
-#                       np.array([[0.28, 0], [0, 0.2]]), columns=d.keys(), index=d.keys()),
-#                   kappa=1)
+newr_asarray = new_ptf.df.loc['r'].values
+neww_asarray = new_ptf.df.loc['w'].values
+r_asarray = ptf.df.loc['r'].values
+w_asarray = ptf.df.loc['w'].values
+asset_asarray = ptf.df.keys()
 
-# port2.imp_kap()
-# # print(port2.kappa)
+xloc = np.arange(len(asset_asarray))
+widthb = 0.3
 
-# # views = Views()
-# # df = pd.DataFrame(
-# #     {
-# #         'fixed_income': [0, 1],
-# #         'equities': [1, 0],
-# #         'r': [0.05, 0.025],
-# #         'c': [0.1, 0.5]
-# #     })
-# # views.add_views(df)
+axr.bar(xloc - widthb / 2, r_asarray, widthb,
+        label='Market Portfolio', color='aquamarine')
+axr.bar(xloc + widthb / 2, newr_asarray, widthb,
+        label='Custom Portfolio', color='deepskyblue')
+axw.bar(xloc - widthb / 2, w_asarray, widthb,
+        label='Market Portfolio', color='aquamarine')
+axw.bar(xloc + widthb / 2, neww_asarray, widthb,
+        label='Custom Portfolio', color='deepskyblue')
 
-# problem = PortfolioProblem(port2, views)
+axr.set_ylabel('Excess return')
+axr.set_xticks(xloc)
+axr.set_xticklabels([])
+axr.legend()
 
-# # print(port2.w)
-# #p = problem.post_ret100_k(views[0], inplace=False)
-# # print(p.w)
-# print(problem.w_pk(views[0]))
-# print(problem.w_pk(views[1]))
-# #print(problem.f_k(0.3, port2, views[0]))
-# Omega = problem.compute_Omega()
-# print(Omega)
+axw.set_ylabel('Weight')
+axw.set_xticks(xloc)
+axw.set_xticklabels(asset_asarray, rotation=30)
 
-# InvSig = np.linalg.inv(1 * port2.cov)
-# InvOme = np.linalg.inv(Omega)
-# first_term = np.linalg.inv(InvSig + np.dot(views.P.T, InvOme).dot(views.P))
-# second_term = np.dot(InvSig, port2.r) + \
-#     np.dot(views.P.T, InvOme).dot(views.df.r)
-# E = np.dot(first_term, second_term)
-# print(E)
-# NCov = port2.cov
-# #+ \
-# #    np.linalg.inv(InvSig + np.dot(views.P.T, InvOme).dot(views.P))
-# print(NCov)
-# print(np.linalg.solve(port2.kappa * NCov, E))
+plt.show()
