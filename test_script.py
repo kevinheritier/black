@@ -20,6 +20,10 @@ ptf2.read_csv_cov(file_path_VCV)
 # print(ptf.df)
 # print(ptf._cov)
 ptf.optim_w()
+# print(np.linalg.inv(ptf2._cov.values))
+# print(ptf2.r.values)
+# w = np.linalg.inv(ptf2._cov.values) @ ptf2.r.values
+# print(w)
 ptf2.optim_w()
 
 # print(ptf._cov)
@@ -40,14 +44,17 @@ ptf2.optim_w()
 
 
 reverse_problem = ReversePortfolioProblem(ptf, ptf2)
-views = reverse_problem.compute_views(tau=0.025)
-# print(views)
+views = reverse_problem.compute_views(tau=0.025, conf=0.5)
+print(views)
 problem = PortfolioProblem(ptf, views)
 new_ptf = problem.post_portfolio(omega_analytical=True, tau=0.025)
 
 print(ptf.df)
 print(ptf2.df)
 print(new_ptf.df)
+# print(reverse_problem.Omega)
+# print(problem.compute_Omega_analytical(tau=0.025))
+#print(reverse_problem.Q - views.df.r)
 
 # newr_asarray = new_ptf.df.loc['r'].values
 # neww_asarray = new_ptf.df.loc['w'].values

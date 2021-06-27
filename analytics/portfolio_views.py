@@ -601,9 +601,9 @@ class ReversePortfolioProblem:
         first_term = self.t_portfolio.df.loc['r'].values - \
             self.m_portfolio.df.loc['r'].values
         second_term = np.linalg.inv(
-            tau * Sigma @ np.linalg.inv(tau * Sigma + self.Omega))
+            (tau * Sigma) @ np.linalg.inv(tau * Sigma + self.Omega))
         third_term = self.m_portfolio.df.loc['r'].values
-        self.Q = first_term @ second_term + third_term
+        self.Q = second_term @ first_term + third_term
 
     def compute_views(self, conf=0.5, tau=1):
         """
