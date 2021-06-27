@@ -577,3 +577,23 @@ class PortfolioProblem:
         views = Views()
         self.views = views.read_xlsx_views(
             file_path, r_name='R', c_name='C', sheet_name=views_sheet)
+
+
+class ReversePortfolioProblem:
+    """docstring for ReversePortfolioProblem"""
+
+    def __init__(self, m_portfolio=None, t_portfolio=None):
+        self.m_portfolio = m_portfolio
+        self.t_portfolio = t_portfolio
+
+    def compute_Omega(self, alpha=0.5, tau=1):
+    """
+    Compute an Omega matrix, diagonalization of Sigma
+    """
+        Sigma = self.m_portfolio._cov
+        return alpha * tau * np.diag(np.diag(Sigma))
+
+    def compute_Q(self, alpha=0.5, tau=1):
+    """
+    Compute a Q matrix, not far from the excess return needed ??
+    """
