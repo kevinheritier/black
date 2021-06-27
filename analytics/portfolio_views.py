@@ -587,33 +587,33 @@ class ReversePortfolioProblem:
         self.t_portfolio = t_portfolio
 
     def compute_Omega(self, alpha=1, tau=1):
-    """
-    Compute an Omega matrix, diagonalization of Sigma
-    """
+        """
+        Compute an Omega matrix, diagonalization of Sigma
+        """
         Sigma = self.m_portfolio._cov
         self.Omega = alpha * tau * np.diag(np.diag(Sigma))
 
     def compute_Q(self, alpha=1, tau=1):
-    """
-    Compute a Q matrix, not far from the excess return needed ??
-    """
-        Sigma = self.m.m_portfolio._cov
-        first_term = t_portfolio.df.loc['r'].values - \
-            m_portfolio.df.loc['r'].values
+        """
+        Compute a Q matrix, not far from the excess return needed ??
+        """
+        Sigma = self.m_portfolio._cov
+        first_term = self.t_portfolio.df.loc['r'].values - \
+            self.m_portfolio.df.loc['r'].values
         second_term = np.linalg.inv(
             tau * Sigma @ np.linalg.inv(tau * Sigma + self.Omega))
-        third_term = m_portfolio.df.loc['r'].values
+        third_term = self.m_portfolio.df.loc['r'].values
         self.Q = first_term @ second_term + third_term
 
     def compute_views(self, conf=0.5, tau=1):
-    """
-    Genere des views qui permettent de retrouver le portefeuille T a partir du portefeuille de marché M
-    """
+        """
+        Genere des views qui permettent de retrouver le portefeuille T a partir du portefeuille de marché M
+        """
         views = Views()
         self.compute_Omega((1 - conf) / conf, tau)
         self.compute_Q((1 - conf) / conf, tau)
-        P = np.eye(len(m_portfolio.df))
-        df = pd.DataFrame(P, columns=self.m_portfolio.df.index)
+        P = np.eye(self.m_portfolio.df.shape[1])
+        df = pd.DataFrame(P, columns=self.m_portfolio.df.columns)
         df['c'] = conf
         df['r'] = self.Q
         views.add_views(df)
