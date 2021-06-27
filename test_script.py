@@ -45,16 +45,17 @@ widthb = 0.3
 axr.bar(xloc - widthb / 2, r_asarray, widthb,
         label='Market Portfolio', color='aquamarine')
 axr.bar(xloc + widthb / 2, newr_asarray, widthb,
-        label='Custom Portfolio', color='deepskyblue')
+        label='Tactic Portfolio', color='deepskyblue')
 axw.bar(xloc - widthb / 2, w_asarray, widthb,
         label='Market Portfolio', color='aquamarine')
 axw.bar(xloc + widthb / 2, neww_asarray, widthb,
-        label='Custom Portfolio', color='deepskyblue')
+        label='Tactic Portfolio', color='deepskyblue')
 
 axr.set_ylabel('Excess return')
 axr.set_xticks(xloc)
 axr.set_xticklabels([])
 axr.legend()
+axr.set_title('Black-Litterman')
 
 axw.set_ylabel('Weight')
 axw.set_xticks(xloc)
