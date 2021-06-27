@@ -586,14 +586,14 @@ class ReversePortfolioProblem:
         self.m_portfolio = m_portfolio
         self.t_portfolio = t_portfolio
 
-    def compute_Omega(self, alpha=0.5, tau=1):
+    def compute_Omega(self, alpha=1, tau=1):
     """
     Compute an Omega matrix, diagonalization of Sigma
     """
         Sigma = self.m_portfolio._cov
         return alpha * tau * np.diag(np.diag(Sigma))
 
-    def compute_Q(self, alpha=0.5, tau=1):
+    def compute_Q(self, alpha=1, tau=1):
     """
     Compute a Q matrix, not far from the excess return needed ??
     """
