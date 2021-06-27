@@ -596,4 +596,5 @@ class ReversePortfolioProblem:
     def compute_Q(self, alpha=1, tau=1):
     """
     Compute a Q matrix, not far from the excess return needed ??
+    gerqogheroghonvdfklnv;erlghuioerhioghevoihg eoog eorhgjoerhjgo
     """
