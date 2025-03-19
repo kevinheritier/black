@@ -4,9 +4,8 @@ from typing import NamedTuple
 import numpy as np
 import polars as pl
 
-from utils.strong_types import AssetId, Covariance, Return, Returns
 from analytics.exceptions import UnavailableCovarianceError, WeightsDontSumToHundredPercentError
-
+from utils.strong_types import AssetId, Covariance, Returns
 
 
 class WeightedAsset(NamedTuple):
@@ -42,9 +41,9 @@ class Covariances:
         """
         We check that every pair of asset has a covariance defined and that coveriance is positive definite.
         """
-        for asset_1, asset_2 in combinations(self.covariances_map.keys(),2):
-            self.covariance(asset_1, asset_2) >= 0.0
-            abs(self.covariance(asset_1, asset_2) - self.covariance(asset_2, asset_1)) < self.TOL
+        for asset_1, asset_2 in combinations(self.covariances_map.keys(), 2):
+            self.covariance(asset_1, asset_2) >= 0.0  # noqa: B015
+            abs(self.covariance(asset_1, asset_2) - self.covariance(asset_2, asset_1)) < self.TOL  # noqa: B015
 
     def covariance(self, asset_1: AssetId, asset_2: AssetId) -> Covariance:
         """

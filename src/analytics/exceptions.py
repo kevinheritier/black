@@ -21,3 +21,8 @@ class WeightsDontSumToHundredPercentError(Exception):
 class UnavailableCovarianceError(Exception):
     def __init__(self, asset_1: AssetId, asset_2: AssetId) -> None:
         super().__init__(f"Could not find covariance for the pair: {asset_1}, {asset_2}")
+
+
+class EmptyAssetListError(Exception):
+    def __init__(self) -> None:
+        super().__init__("List of asset is empty.")
